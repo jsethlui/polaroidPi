@@ -15,9 +15,15 @@ def main():
     oauthObject = spotipy.SpotifyOAuth(CLIENT_ID, CLIENT_SECRET, "http://google.com/")
     token = oauthObject.get_access_token(as_dict=True)["access_token"]
     spotifyObject = spotipy.Spotify(auth=token)
-    user = spotifyObject.current_user()
 
-    print(json.dumps(user, sort_keys=True, indent=4))
+    user = spotifyObject.current_user()
+    playlists = spotifyObject.current_user_playlists()["items"]
+    
+    print("Enter playlist: ")
+    for i in range(len(playlists)):
+        s  = str(i)
+        s += " " + str(playlists[i]["name"]) 
+        print(s)
 
     sys.exit(0)
 
