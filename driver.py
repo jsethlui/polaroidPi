@@ -1,10 +1,21 @@
 
+import os
 import sys
 import json
 import spotipy
+import multiprocessing
 import pprint as pp
 from yt_dlp import YoutubeDL
+from playsound import playsound
 from youtube_search import YoutubeSearch
+
+ydl_opts = {
+    'format': 'mp3/bestaudio/best',
+    "postprocessors": [{  # Extract audio using ffmpeg
+        "key": "FFmpegExtractAudio",
+        "preferredcodec": "mp3",
+    }]
+}
 
 def main():
     # instantiate secret data
@@ -45,24 +56,34 @@ def main():
         
         # append the url
         for r in res:
-            url.append("youtube.com" + str(r["url_suffix"]))
-    print("url=" + str(url))
+            url.append("https://youtube.com" + str(r["url_suffix"]))
+        d = {"song_name": songName, "artist_names": artistNames}
 
     # begin downloading songs
     if (len(url) == 0):
         print("No links to download")
         sys.exit(0)
 
-    ydl_opts = {
-        'format': 'mp3/bestaudio/best',
-        "postprocessors": [{  # Extract audio using ffmpeg
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-        }]
-    }
-
+    # begin downloading songs
     with YoutubeDL(ydl_opts) as ydl:
         ydl.download(url)
+
+    # begin playing songs, use Control-C to skip to next song
+    # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
+    files = os.listdir(os.getcwd())
+    for f in files:
+        try:
+            if (".mp3" not in str(f)):
+                continue
+            print("Now playing: " + str(f))
+            p = multiprocessing.Process(target=playsound, args=(str(f),))
+            p.start()
+            while (p.is_alive()):       # while process is alive, continue blocking
+                continue
+        except KeyboardInterrupt:
+            p.terminate()
+            continue
+
     print("Exiting...")
     sys.exit(0)
 
