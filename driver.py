@@ -46,14 +46,15 @@ def main():
         # append the url
         for r in res:
             url.append("youtube.com" + str(r["url_suffix"]))
-    
+    print("url=" + str(url))
+
     # begin downloading songs
-    if (len(urls) == 0):
+    if (len(url) == 0):
         print("No links to download")
         sys.exit(0)
 
     ydl_opts = {
-        'format': 'm4a/bestaudio/best',
+        'format': 'mp3/bestaudio/best',
         "postprocessors": [{  # Extract audio using ffmpeg
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
@@ -61,7 +62,7 @@ def main():
     }
 
     with YoutubeDL(ydl_opts) as ydl:
-        ydl.download(urls)
+        ydl.download(url)
     print("Exiting...")
     sys.exit(0)
 
