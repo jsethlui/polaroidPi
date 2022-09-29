@@ -87,34 +87,35 @@ def main():
     }
 
     log = {}
-    with open("./log.json") as j:
+    stopDownload = False
+    with open("./log.json", "r") as j:
         try:
             log = json.load(j)
         except json.decoder.JSONDecodeError:
             print("Warning: nothing to read within log.json")
-    print(log)
+            stopDownload = True
+    print(log.keys())
 
-    with YoutubeDL(ydl_opts) as ydl, open("log.json", "w", encoding="utf-8") as f:
-        for u in url:
-            info_dict = ydl.extract_info(u, download=False)
-            video_url = info_dict.get("url", "")            
-            video_id = info_dict.get("id", "")
-            video_title = info_dict.get('title', "")        
-            if (video_id not in log.keys()):
-                # download and write these files to log as json format                
-                ydl.download(u)        
-                if (video_url != "") and (video_id != "") and (video_title != ""):
+    with YoutubeDL(ydl_opts) as ydl, open("log.json", "r+", encoding="utf-8") as f:
+        if (stopDownload):
+            for u in url:
+                info_dict = ydl.extract_info(u, download=False)
+                video_url = info_dict.get("url", "")            
+                video_id = info_dict.get("id", "")
+                video_title = info_dict.get('title', "")        
+                if (video_id not in log.keys()):
+                    # download and write these files to log as json format                
+                    ydl.download(u)        
                     d = {str(video_id): {"title": str(video_title),
                                          "url": str(video_url)
                                         }
-                        }
+                    }
                     json.dump(d, f, ensure_ascii=False, indent=4)
 
     # begin playing songs, use Control-C to skip to next song
     # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
     path = os.getcwd() + "/music"
     print(path)
-    sys.exit(95)
 
     files = os.listdir(path)
     for f in files:
