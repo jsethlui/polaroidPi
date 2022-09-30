@@ -18,11 +18,6 @@ def main():
     # register signal handler
     signal.signal(signal.SIGINT, signal_handler)
 
-    # check if music directory exists
-    if (not os.path.exists("./music")):
-        print("music directory not not exist, creating...")
-        os.mkdir("music")
-
     # check if log exists
     if (not os.path.exists("./log.json")):
         print("log.json does not exist, creating...")
@@ -38,7 +33,7 @@ def main():
 
     # set up spotipy
     oauthObject = spotipy.SpotifyOAuth(CLIENT_ID, CLIENT_SECRET, "http://google.com/")
-    token = oauthObject.get_access_token(as_dict=True)["access_token"]
+    token = oauthObject.get_access_token(as_dict=False)
     spotifyObject = spotipy.Spotify(auth=token)
     user = spotifyObject.current_user()
     playlists = spotifyObject.current_user_playlists()["items"]
@@ -53,6 +48,14 @@ def main():
     playlistID = playlists[opt]["id"]
     playlistItems = spotifyObject.playlist_items(playlistID)
     
+    # check if directory with same name as playlist exists
+    playlistName = playlists[opt]["name"]
+    path = os.getcwd() + "/" + str(playlistName)
+    if (not os.path.exists(path)):
+        print(str(playlistName) + " does not exist, creating...")
+        os.makedirs(path)
+        print(str(playlistName) + " successfully created...")
+
     # extract the song name and artist(s)
     url = []
     for item in playlistItems["items"]:
@@ -69,7 +72,6 @@ def main():
         # append the url
         for r in res:
             url.append("https://youtube.com" + str(r["url_suffix"]))
-        d = {"song_name": songName, "artist_names": artistNames}
 
     # check if there any videos to download first
     if (len(url) == 0):
@@ -78,7 +80,7 @@ def main():
 
     # begin downloading songs
     ydl_opts = {
-        'outtmpl': 'music/%(title)s-%(id)s.%(ext)s',
+        'outtmpl': str(playlistName) + '/%(title)s-%(id)s.%(ext)s',
         'format': 'mp3/bestaudio/best',
         'postprocessors': [{  # Extract audio using ffmpeg
             'key': 'FFmpegExtractAudio',
@@ -88,7 +90,7 @@ def main():
 
     log = {}
     stopDownload = False
-    with open("./log.json", "r") as j:
+    with open("./log.json", "r", encoding="utf-8") as j:
         try:
             log = json.load(j)
         except json.decoder.JSONDecodeError:
@@ -96,7 +98,7 @@ def main():
             stopDownload = True
     print(log.keys())
 
-    with YoutubeDL(ydl_opts) as ydl, open("log.json", "r+", encoding="utf-8") as f:
+    with YoutubeDL(ydl_opts) as ydl:
         if (stopDownload):
             for u in url:
                 info_dict = ydl.extract_info(u, download=False)
@@ -110,26 +112,29 @@ def main():
                                          "url": str(video_url)
                                         }
                     }
-                    json.dump(d, f, ensure_ascii=False, indent=4)
+                    log.update(d)
+
+    with open("log.json", "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=4)
 
     # begin playing songs, use Control-C to skip to next song
     # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
-    path = os.getcwd() + "/music"
-    print(path)
+    # path = os.getcwd() + "/music"
+    # print(path)
 
-    files = os.listdir(path)
-    for f in files:
-        try:
-            if (".mp3" not in str(f)):
-                continue
-            print("Now playing: " + str(f))
-            p = multiprocessing.Process(target=playsound, args=(f,))
-            p.start()
-            while (p.is_alive()):       # while process is alive, continue blocking
-                continue
-        except KeyboardInterrupt:
-            p.terminate()
-            continue
+    # files = os.listdir(path)
+    # for f in files:
+    #     try:
+    #         if (".mp3" not in str(f)):
+    #             continue
+    #         print("Now playing: " + str(f))
+    #         p = multiprocessing.Process(target=playsound, args=(f,))
+    #         p.start()
+    #         while (p.is_alive()):       # while process is alive, continue blocking
+    #             continue
+    #     except KeyboardInterrupt:
+    #         p.terminate()
+    #         continue
 
     print("Exiting...")
     sys.exit(0)
