@@ -98,8 +98,8 @@ def main():
             stopDownload = True
     print(log.keys())
 
-    with YoutubeDL(ydl_opts) as ydl:
-        if (stopDownload):
+    if (stopDownload):
+        with YoutubeDL(ydl_opts) as ydl:
             for u in url:
                 info_dict = ydl.extract_info(u, download=False)
                 video_url = info_dict.get("url", "")            
@@ -114,8 +114,8 @@ def main():
                     }
                     log.update(d)
 
-    with open("log.json", "w", encoding="utf-8") as f:
-        json.dump(log, f, ensure_ascii=False, indent=4)
+        with open("log.json", "w", encoding="utf-8") as f:
+            json.dump(log, f, ensure_ascii=False, indent=4)
 
     # begin playing songs, use Control-C to skip to next song
     # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
