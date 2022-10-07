@@ -22,7 +22,7 @@ def downloadSongs(url, playlistName):
 
     def download(u):
         ydl_opts = {
-            'outtmpl': str(playlistName) + '/%(title)s-%(id)s.%(ext)s',
+            'outtmpl': "music/" + str(playlistName) + '/%(title)s-%(id)s.%(ext)s',
             'format': 'mp3/bestaudio/best',
             'postprocessors': [{  # Extract audio using ffmpeg
                 'key': 'FFmpegExtractAudio',
@@ -62,6 +62,11 @@ def main():
         print("log.json does not exist, creating...")
         f = open("log.json", "w+")
         f.close()
+    path = os.getcwd() + "/music"
+    if (not os.path.exists(path)):
+        print("directory named 'music' does not exist, creating...")
+        os.makedirs(path)
+        print("'music' successfully created...")        
 
     # instantiate secret data
     with open("./config.json") as j:
@@ -91,9 +96,9 @@ def main():
     playlistName = playlists[opt]["name"]
     path = os.getcwd() + "/" + str(playlistName)
     if (not os.path.exists(path)):
-        print(str(playlistName) + " does not exist, creating...")
+        print("directory named '" + str(playlistName) + "' does not exist, creating...")
         os.makedirs(path)
-        print(str(playlistName) + " successfully created...")
+        print("'" + str(playlistName) + "' successfully created...")
 
     # extract the song name and artist(s)
     url = []
@@ -129,7 +134,7 @@ def main():
 
     start = time.time()
     if (stopDownload):
-        l = downloadSongs(url, playlistName)      
+        downloadSongs(url, playlistName)      
     print(time.time() - start)
 
     # begin playing songs, use Control-C to skip to next song
