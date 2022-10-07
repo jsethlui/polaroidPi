@@ -1,0 +1,8 @@
+
+#!/usr/bin/env bash
+
+rm -rf test
+rm -f log.json
+
+touch log.json
+python3 driver.py

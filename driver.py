@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import time
 import signal
 import spotipy
 import multiprocessing
@@ -9,10 +10,42 @@ import pprint as pp
 from yt_dlp import YoutubeDL
 from playsound import playsound
 from youtube_search import YoutubeSearch
+from concurrent.futures import ThreadPoolExecutor
 
 def signal_handler(sig, frame):
     print("\nExiting...")
     sys.exit(0)
+   
+def downloadSongs(url, playlistName, log):
+
+    def download(u):
+        ydl_opts = {
+            'outtmpl': str(playlistName) + '/%(title)s-%(id)s.%(ext)s',
+            'format': 'mp3/bestaudio/best',
+            'postprocessors': [{  # Extract audio using ffmpeg
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+            }]
+        }        
+        with YoutubeDL(ydl_opts) as ydl:    
+            info = ydl.extract_info(u, download=False)
+            videoURL = info.get("url", "")            
+            videoID = info.get("id", "")
+            videoTitle = info.get('title', "")        
+            if (videoID not in log.keys()):
+                # download and write these files to log as json format                
+                ydl.download(u)        
+                d = {str(videoID): {"title": str(videoTitle),
+                                     "url": str(videoURL)
+                                    }
+                }
+                log.update(d) 
+
+    NUM_THREADS = len(url)
+    with ThreadPoolExecutor(NUM_THREADS) as executor:
+        for u in url:
+            l = executor.submit(download, u).result()
+    return l
 
 def main():
     # register signal handler
@@ -78,16 +111,6 @@ def main():
         print("No links to download")
         sys.exit(0)
 
-    # begin downloading songs
-    ydl_opts = {
-        'outtmpl': str(playlistName) + '/%(title)s-%(id)s.%(ext)s',
-        'format': 'mp3/bestaudio/best',
-        'postprocessors': [{  # Extract audio using ffmpeg
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-        }]
-    }
-
     log = {}
     stopDownload = False
     with open("./log.json", "r", encoding="utf-8") as j:
@@ -96,26 +119,11 @@ def main():
         except json.decoder.JSONDecodeError:
             print("Warning: nothing to read within log.json")
             stopDownload = True
-    print(log.keys())
 
     if (stopDownload):
-        with YoutubeDL(ydl_opts) as ydl:
-            for u in url:
-                info_dict = ydl.extract_info(u, download=False)
-                video_url = info_dict.get("url", "")            
-                video_id = info_dict.get("id", "")
-                video_title = info_dict.get('title', "")        
-                if (video_id not in log.keys()):
-                    # download and write these files to log as json format                
-                    ydl.download(u)        
-                    d = {str(video_id): {"title": str(video_title),
-                                         "url": str(video_url)
-                                        }
-                    }
-                    log.update(d)
-
+        l = downloadSongs(url, playlistName, log)
         with open("log.json", "w", encoding="utf-8") as f:
-            json.dump(log, f, ensure_ascii=False, indent=4)
+            json.dump(l, f, ensure_ascii=False, indent=4)        
 
     # begin playing songs, use Control-C to skip to next song
     # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
