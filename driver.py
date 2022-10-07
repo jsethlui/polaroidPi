@@ -12,11 +12,13 @@ from playsound import playsound
 from youtube_search import YoutubeSearch
 from concurrent.futures import ThreadPoolExecutor
 
-def signal_handler(sig, frame):
+log = {}
+
+def signalHandler(sig, frame):
     print("\nExiting...")
     sys.exit(0)
    
-def downloadSongs(url, playlistName, log):
+def downloadSongs(url, playlistName):
 
     def download(u):
         ydl_opts = {
@@ -44,12 +46,16 @@ def downloadSongs(url, playlistName, log):
     NUM_THREADS = len(url)
     with ThreadPoolExecutor(NUM_THREADS) as executor:
         for u in url:
-            l = executor.submit(download, u).result()
-    return l
+            executor.submit(download, u)
+
+    global log
+    with open("log.json", "w", encoding="utf-8") as f:
+        json.dump(log, f, ensure_ascii=False, indent=4)  
+    return log
 
 def main():
     # register signal handler
-    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT, signalHandler)
 
     # check if log exists
     if (not os.path.exists("./log.json")):
@@ -111,6 +117,7 @@ def main():
         print("No links to download")
         sys.exit(0)
 
+    global log
     log = {}
     stopDownload = False
     with open("./log.json", "r", encoding="utf-8") as j:
@@ -120,10 +127,10 @@ def main():
             print("Warning: nothing to read within log.json")
             stopDownload = True
 
+    start = time.time()
     if (stopDownload):
-        l = downloadSongs(url, playlistName, log)
-        with open("log.json", "w", encoding="utf-8") as f:
-            json.dump(l, f, ensure_ascii=False, indent=4)        
+        l = downloadSongs(url, playlistName)      
+    print(time.time() - start)
 
     # begin playing songs, use Control-C to skip to next song
     # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module

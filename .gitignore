@@ -1,4 +1,6 @@
-config.json
 test/
+docs/
+
+config.json
 test.py
 log.json
