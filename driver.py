@@ -53,7 +53,34 @@ def downloadSongs(url, playlistName):
         json.dump(log, f, ensure_ascii=False, indent=4)  
     return log
 
+def getURL(artistData):
+
+    url = []
+
+    def search(a):
+        artistNames = []
+        songName = a["track"]["name"]        
+        for artist in a["track"]["artists"]:
+            artistNames.append(artist["name"])
+    
+        # do a Youtube search with song name and artists
+        searchParameter = str(songName) + ", " + " ".join(artistNames)
+        res = YoutubeSearch(searchParameter, max_results=1).to_dict()   # assume the first result is the song we"re looking for        
+
+        # append the url
+        for r in res:
+            url.append("https://youtube.com" + str(r["url_suffix"]))
+
+    NUM_THREADS = len(artistData)
+    with ThreadPoolExecutor(NUM_THREADS) as executor:
+        for a in artistData:
+            executor.submit(search, a)
+    return url
+
+
 def main():
+    start = time.time()
+
     # register signal handler
     signal.signal(signal.SIGINT, signalHandler)
 
@@ -100,24 +127,7 @@ def main():
         os.makedirs(path)
         print("'" + str(playlistName) + "' successfully created...")
 
-    # extract the song name and artist(s)
-    url = []
-    for item in playlistItems["items"]:
-        songName = item["track"]["name"]
-        artistNames = []
-        
-        for artist in item["track"]["artists"]:
-            artistNames.append(artist["name"])  
-        
-        # do a Youtube search with song name and artists
-        searchParameter = str(songName) + ", " + " ".join(artistNames)
-        res = YoutubeSearch(searchParameter, max_results=1).to_dict()   # assume the first result is the song we"re looking for
-        
-        # append the url
-        for r in res:
-            url.append("https://youtube.com" + str(r["url_suffix"]))
-
-    # check if there any videos to download first
+    url = getURL(playlistItems["items"])    
     if (len(url) == 0):
         print("No links to download")
         sys.exit(0)
@@ -132,10 +142,9 @@ def main():
             print("Warning: nothing to read within log.json")
             stopDownload = True
 
-    start = time.time()
     if (stopDownload):
-        downloadSongs(url, playlistName)      
-    print(time.time() - start)
+        downloadSongs(url, playlistName)
+    print(time.time() - start)        
 
     # begin playing songs, use Control-C to skip to next song
     # reference: https://stackoverflow.com/questions/57158779/how-to-stop-audio-with-playsound-module
